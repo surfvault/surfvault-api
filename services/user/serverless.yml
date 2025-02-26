@@ -1,0 +1,68 @@
+service: user-service
+
+frameworkVersion: "3"
+
+plugins: ${file(../../sls_common/plugins.yml):plugins}
+
+provider: ${file(../../sls_common/provider.yml):provider}
+
+constructs:
+  updateS3PhotographerHandle:
+    type: queue
+    worker:
+      handler: handler.updateS3PhotographerHandle
+
+functions:
+  getSelf:
+    handler: handler.getSelf
+    timeout: 30
+    events:
+      - httpApi:
+          path: /user/{id}/self
+          method: get
+  
+  getPhotographer:
+    handler: handler.getPhotographer
+    timeout: 30
+    events:
+      - httpApi:
+          path: /user/{handle}
+          method: get
+
+  updateUserHandle:
+    handler: handler.updateUserHandle
+    timeout: 30
+    events:
+      - httpApi:
+          path: /user/{id}
+          method: patch
+
+custom:
+  stage: "${opt:stage, self:provider.stage}"
+  projectName: ${self:provider.stage}-surfvault-api
+
+resources:
+  Resources:
+    #**************************************************************
+    #                      SQS Queues
+    #**************************************************************
+    UpdateS3PhotographerHandleQueueDeadLetterQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "${self:provider.stage}-UpdateS3PhotographerHandleQueueDeadLetterQueue"
+        MessageRetentionPeriod: 1209600
+        DelaySeconds: 10
+
+    UpdateS3PhotographerHandleQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "${self:provider.stage}-UpdateS3PhotographerHandleQueue"
+        VisibilityTimeout: 60
+        MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - UpdateS3PhotographerHandleQueueDeadLetterQueue
+              - Arn
+          maxReceiveCount: 3
+

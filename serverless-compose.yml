@@ -1,0 +1,12 @@
+services:
+  auth:
+    path: services/auth
+
+  country:
+    path: services/country
+    
+  surf:
+    path: services/surf
+
+  user:
+    path: services/user

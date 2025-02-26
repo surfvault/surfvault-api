@@ -1,0 +1,65 @@
+service: auth-service
+
+frameworkVersion: "3"
+
+plugins: ${file(../../sls_common/plugins.yml):plugins}
+
+provider: ${file(../../sls_common/provider.yml):provider}
+
+functions:
+  login:
+    handler: handler.login
+    timeout: 30
+    events:
+      - httpApi:
+          path: /auth/login
+          method: post
+
+custom:
+  stage: "${opt:stage, self:provider.stage}"
+  projectName: ${self:provider.stage}-surfvault-api
+
+resources:
+  Resources:
+    #**************************************************************
+    #                      DynamoDB Tables
+    #**************************************************************
+    UserTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${self:provider.stage}-Users
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: email
+            AttributeType: S
+          - AttributeName: handle
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: email
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: EmailIndex
+            KeySchema:
+              - AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL # Project all attributes
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          - IndexName: HandleIndex
+            KeySchema:
+              - AttributeName: handle
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+

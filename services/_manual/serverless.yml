@@ -1,0 +1,39 @@
+service: country-service
+
+frameworkVersion: "3"
+
+plugins: ${file(../../sls_common/plugins.yml):plugins}
+
+provider: ${file(../../sls_common/provider.yml):provider}
+
+functions:
+  getCountries:
+    handler: handler.getCountries
+    timeout: 30
+    events:
+      - httpApi:
+          path: /country
+          method: get
+
+custom:
+  stage: "${opt:stage, self:provider.stage}"
+  projectName: ${self:provider.stage}-surfvault-api
+
+resources:
+  Resources:
+    #**************************************************************
+    #                      DynamoDB Tables
+    #**************************************************************
+    CountryTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${self:provider.stage}-Countries
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1

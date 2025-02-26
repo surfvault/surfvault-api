@@ -1,0 +1,164 @@
+service: surf-service
+
+frameworkVersion: "3"
+
+plugins: ${file(../../sls_common/plugins.yml):plugins}
+
+provider: ${file(../../sls_common/provider.yml):provider}
+
+functions:
+  getSurfMedia:
+    handler: handler.getSurfMedia
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/media
+          method: get
+  
+  getSurfBreaks:
+    handler: handler.getSurfBreaks
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/breaks
+          method: get
+
+  doesSurfBreakExist:
+    handler: handler.doesSurfBreakExist
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/{country}/{region}/{surf_break}
+          method: get
+
+  createSurfBreak:
+    handler: handler.createSurfBreak
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/break
+          method: post
+
+  saveSurfMedia:
+    handler: handler.saveSurfMedia
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/media
+          method: post
+  
+  deleteSurfMedia:
+    handler: handler.deleteSurfMedia
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/media/{country}/{region}/{surf_break}/{date}/{photographer}/{photo}/{type}
+          method: delete
+
+resources:
+  Resources:
+    #**************************************************************
+    #                      S3 Buckets
+    #**************************************************************
+    SurfBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: ${self:provider.stage}-surf
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: BucketOwnerEnforced
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - HEAD
+                - PUT
+                - POST
+              AllowedOrigins:
+                - "*"
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          IgnorePublicAcls: false
+          BlockPublicPolicy: false
+          RestrictPublicBuckets: false
+
+    SurfBucketOriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Description: "Restrict access to the media bucket"
+          Name: "${self:provider.stage}-SurfBucketOriginAccessControl"
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+    SurfBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref SurfBucket
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: "${self:provider.stage}-SurfBucketPolicy"
+              Effect: "Allow"
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource: !Sub "arn:aws:s3:::${SurfBucket}/*"
+
+    #**************************************************************
+    #                      DynamoDB Tables
+    #**************************************************************
+    SurfBreakTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${self:provider.stage}-SurfBreaks
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: name  # 🔹 Added for GSI SurfBreakNameIndex
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: SurfBreakNameIndex
+            KeySchema:
+              - AttributeName: name
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL # Project all attributes
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+
+    SurfPhotoTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${self:provider.stage}-SurfPhotos
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+custom:
+  stage: "${opt:stage, self:provider.stage}"
+  projectName: ${self:provider.stage}-surfvault-api
+

@@ -1,0 +1,63 @@
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, "dev"}
+  versionFunctions: false
+  stackName: "${self:service}-${self:provider.stage}-cf"
+  stackTags:
+    applicationName: surf-vault-api
+  tags:
+    ApplicationName: surf-vault-api
+  logRetentionInDays: 180
+
+  environment: 
+    STAGE: ${self:provider.stage}
+    UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/588738616160/user-service-dev-cf-updateS3PhotographerHandle
+
+  # Refined IAM Role Statements for More Secure Access
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:GetObject
+        - s3:ListBucket
+        - s3:DeleteObject
+      Resource:
+        - "arn:aws:s3:::${self:provider.stage}-surf"
+        - "arn:aws:s3:::${self:provider.stage}-surf/*"
+    - Effect: Allow
+      Action:
+        - lambda:InvokeFunction
+      Resource:
+        - "*"
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Users"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfPhotos"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfBreaks"
+    - Effect: "Allow"
+      Action:
+        - "sqs:SendMessage"
+        - "sqs:ReceiveMessage"
+        - "sqs:DeleteMessage"
+        - "sqs:GetQueueAttributes"
+        - "sqs:GetQueueUrl"
+      Resource: "arn:aws:sqs:${self:provider.region}:*:*"
+
+  iam:
+    role:
+      managedPolicies:
+        - arn:aws:iam::aws:policy/CloudWatchEventsFullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+
+  httpApi:
+    cors: true
