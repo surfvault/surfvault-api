@@ -3,8 +3,8 @@ import dynamoose from "dynamoose";
 // Create new DynamoDB instance
 const ddb = new dynamoose.aws.ddb.DynamoDB({
     "credentials": {
-        "accessKeyId": "AKIAYSE4OLNQKMIINFRZ", // ************* REMOVE ***********************************
-        "secretAccessKey": "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" // ************* REMOVE ***********************************
+        "accessKeyId": process.env.AWS_ACCESS_KEY_ID, // ************* REMOVE ***********************************
+        "secretAccessKey": process.env.AWS_SECRET_ACCESS_KEY // ************* REMOVE ***********************************
     },
     "region": "us-east-1"
 });

@@ -13,7 +13,9 @@ provider:
 
   environment: 
     STAGE: ${self:provider.stage}
-    UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/588738616160/user-service-dev-cf-updateS3PhotographerHandle
+    UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL: ${env:UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL}
+    AWS_ACCESS_KEY_ID: ${env:AWS_ACCESS_KEY_ID}
+    AWS_SECRET_ACCESS_KEY: ${env:AWS_SECRET_ACCESS_KEY}
 
   # Refined IAM Role Statements for More Secure Access
   iamRoleStatements:
