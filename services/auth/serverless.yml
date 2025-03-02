@@ -1,6 +1,6 @@
 service: auth-service
 
-frameworkVersion: "3"
+frameworkVersion: "4"
 
 plugins: ${file(../../sls_common/plugins.yml):plugins}
 

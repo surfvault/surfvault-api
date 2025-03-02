@@ -11,7 +11,7 @@ export const login = async (
     const payload = JSON.parse(event.body || "{}");
     const { user, request } = payload;
     const { email, name, picture, user_id: auth0Id } = user;
-    const { cityName, countryCode, subdivisionCode } = request.geoip;
+    const { cityName, countryCode, subdivisionCode, latitude, longitude } = request.geoip;
     console.log("Authenticating user: ", email, 'from', cityName, subdivisionCode, countryCode);
 
     const databaseUser = await UsersModel.query('email').eq(email).exec();
@@ -25,6 +25,10 @@ export const login = async (
         auth0Id,
         picture,
         handle: email.split('@')[0].replace('.', '-'),
+        coordinates: {
+          latitude,
+          longitude,
+        }
       });
       console.log("result: ", result);
       return {
@@ -37,7 +41,7 @@ export const login = async (
       };
     }
 
-    const result = await UsersModel.update({ id: databaseUser[0].id, email }, { name, picture });
+    const result = await UsersModel.update({ id: databaseUser[0].id, email }, { name, picture, coordinates: { latitude, longitude } });
 
     return {
       statusCode: 200,
