@@ -2,8 +2,8 @@ services:
   auth:
     path: services/auth
 
-  country:
-    path: services/country
+  # country:
+  #   path: services/country
     
   surf:
     path: services/surf

@@ -108,7 +108,11 @@ const userSchema = new dynamoose.Schema({
     handleChanged: {
         type: Boolean,
         default: false
-    }
+    },
+    coordinates: {
+        type: Object,
+        default: {}
+    },
 }, {
     "saveUnknown": true,
     "timestamps": true

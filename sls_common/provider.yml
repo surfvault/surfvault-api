@@ -1,3 +1,5 @@
+useDotenv: true
+
 provider:
   name: aws
   runtime: nodejs20.x
@@ -14,52 +16,51 @@ provider:
   environment: 
     STAGE: ${self:provider.stage}
     UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL: ${env:UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL}
-    AWS_ACCESS_KEY_ID: ${env:AWS_ACCESS_KEY_ID}
-    AWS_SECRET_ACCESS_KEY: ${env:AWS_SECRET_ACCESS_KEY}
-
-  # Refined IAM Role Statements for More Secure Access
-  iamRoleStatements:
-    - Effect: Allow
-      Action:
-        - s3:PutObject
-        - s3:GetObject
-        - s3:ListBucket
-        - s3:DeleteObject
-      Resource:
-        - "arn:aws:s3:::${self:provider.stage}-surf"
-        - "arn:aws:s3:::${self:provider.stage}-surf/*"
-    - Effect: Allow
-      Action:
-        - lambda:InvokeFunction
-      Resource:
-        - "*"
-    - Effect: Allow
-      Action:
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
-        - dynamodb:UpdateItem
-        - dynamodb:DeleteItem
-      Resource: 
-        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Users"
-        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfPhotos"
-        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfBreaks"
-    - Effect: "Allow"
-      Action:
-        - "sqs:SendMessage"
-        - "sqs:ReceiveMessage"
-        - "sqs:DeleteMessage"
-        - "sqs:GetQueueAttributes"
-        - "sqs:GetQueueUrl"
-      Resource: "arn:aws:sqs:${self:provider.region}:*:*"
-
+    AWS_KEY_ID: ${env:AWS_KEY_ID}
+    AWS_KEY_SECRET: ${env:AWS_KEY_SECRET}
+      
   iam:
     role:
       managedPolicies:
         - arn:aws:iam::aws:policy/CloudWatchEventsFullAccess
         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
         - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      statements: 
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:ListBucket
+            - s3:DeleteObject
+          Resource:
+            - "arn:aws:s3:::${self:provider.stage}-surf"
+            - "arn:aws:s3:::${self:provider.stage}-surf/*"
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource:
+            - "*"
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: 
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Users"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfPhotos"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfBreaks"
+        - Effect: "Allow"
+          Action:
+            - "sqs:SendMessage"
+            - "sqs:ReceiveMessage"
+            - "sqs:DeleteMessage"
+            - "sqs:GetQueueAttributes"
+            - "sqs:GetQueueUrl"
+          Resource: "arn:aws:sqs:${self:provider.region}:*:*"
 
   httpApi:
     cors: true
