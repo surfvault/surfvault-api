@@ -1,4 +1,4 @@
-import { SurfBreaksModel, SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
+import { SurfBreakMediaUploadProgressModel, SurfBreaksModel, SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
 import { S3Service } from "@/shared/s3_service";
 import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
 
@@ -412,6 +412,56 @@ export const getSurfBreaks = async (
       },
       body: JSON.stringify({
         message: "Error getting surf breaks",
+        error: error,
+      }),
+    };
+  }
+};
+
+export const getSurfBreakMediaUploadProgress = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { photographer } = event.queryStringParameters || {};
+    console.log("Received request to get upload progress: ", photographer);
+
+    if (!photographer) {
+      throw new Error("Missing photographer");
+    }
+
+    const users = await UsersModel.query("handle").eq(photographer).exec();
+    if (!users.count) {
+      throw new Error("Photographer not found");
+    }
+
+    const photographerUploads = await SurfBreakMediaUploadProgressModel.query("PK").eq(`USER#${users[0].id}`).exec();
+    const pendingUploads = photographerUploads.filter(upload => (upload.success + upload.error) < upload.total);
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully retrieved uploads for photographer: ${photographer}`,
+        results: {
+          uploads: pendingUploads,
+        }
+      }),
+    };
+
+  } catch (error) {
+    console.error("Error getting surf uploads: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error getting surf uploads",
         error: error,
       }),
     };

@@ -60,6 +60,34 @@ const surfPhotoSchema = new dynamoose.Schema({
 });
 export const SurfPhotosModel = dynamoose.model(`${process.env.STAGE}-SurfPhotos`, surfPhotoSchema, { create: false });
 
+const surfBreakMediaUploadProgressSchema = new dynamoose.Schema({
+    PK: {
+        type: String,
+        required: true,
+        hashKey: true,  // Partition Key (USER#userId)
+    },
+    SK: {
+        type: String,
+        required: true,
+        rangeKey: true, // Sort Key (UPLOAD#country#region#surfBreak#uuid) if not region then (UPLOAD#country#_#surfBreak#uuid)
+    },
+    success: {
+        type: Number,
+        default: 0
+    },
+    error: {
+        type: Number,
+        default: 0
+    },
+    total: {
+        type: Number,
+        required: true
+    },
+}, {
+    "saveUnknown": true,
+    "timestamps": true
+});
+export const SurfBreakMediaUploadProgressModel = dynamoose.model(`${process.env.STAGE}-SurfBreakMediaUploadProgress`, surfBreakMediaUploadProgressSchema, { create: false });
 
 const userSchema = new dynamoose.Schema({
     id: {

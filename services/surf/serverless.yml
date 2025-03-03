@@ -30,6 +30,14 @@ functions:
       - httpApi:
           path: /surf/{country}/{region}/{surf_break}
           method: get
+  
+  getSurfBreakMediaUploadProgress:
+    handler: handler.getSurfBreakMediaUploadProgress
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/uploads
+          method: get
 
   createSurfBreak:
     handler: handler.createSurfBreak
@@ -144,6 +152,24 @@ resources:
       Type: "AWS::DynamoDB::Table"
       Properties:
         TableName: ${self:provider.stage}-SurfPhotos
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+
+    SurfBreakMediaUploadProgressTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${self:provider.stage}-SurfBreakMediaUploadProgress
         AttributeDefinitions:
           - AttributeName: PK
             AttributeType: S
