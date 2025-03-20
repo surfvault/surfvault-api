@@ -1,3 +1,3 @@
 deployDev:
 	@export AWS_PROFILE=surfvault; \
-	sls deploy --stage dev --verbose; \
+	npx serverless@4 deploy --stage dev --verbose; \

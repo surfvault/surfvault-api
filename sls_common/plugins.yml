@@ -1,4 +1,3 @@
 plugins:
   # - serverless-esbuild
   - serverless-lift
-  - serverless-dotenv-plugin

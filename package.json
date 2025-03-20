@@ -16,6 +16,7 @@
         "@aws-sdk/s3-request-presigner": "^3.726.1",
         "aws-lambda": "^1.0.7",
         "dynamoose": "^4.0.3",
+        "formidable": "^3.5.2",
         "react": "^19.0.0-rc.1",
         "react-dom": "^19.0.0-rc.1",
         "uuid": "^11.0.5"
@@ -25,7 +26,6 @@
         "@types/aws-lambda": "^8.10.147",
         "@types/node": "^22.10.5",
         "serverless": "^4.7.0",
-        "serverless-dotenv-plugin": "^6.0.0",
         "serverless-esbuild": "^1.54.6",
         "serverless-lift": "^1.30.3",
         "typescript": "^5.7.3"
