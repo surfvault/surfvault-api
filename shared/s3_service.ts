@@ -51,7 +51,7 @@ export class S3Service {
   public static createUploadPresignedUrl(
     bucket: string,
     key: string,
-    expiresIn = 3600
+    expiresIn = 7200
   ): Promise<string> {
     const command = new PutObjectCommand({ Bucket: bucket, Key: key });
     return getSignedUrl(S3Service._getS3(), command, { expiresIn: expiresIn });
