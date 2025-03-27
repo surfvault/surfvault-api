@@ -125,10 +125,6 @@ const userSchema = new dynamoose.Schema({
     picture: {
         type: String
     },
-    surfBreaks: {
-        type: Object,
-        // : {country: {surfBreak: [dates]}}
-    },
     countries: {
         type: Array,
         default: []

@@ -1,4 +1,4 @@
-import { UsersModel } from "@/database/dynamoose_models";
+import { SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
 import { S3Service } from "@/shared/s3_service";
 import { SQSService } from "@/shared/sqs_service";
 import { APIGatewayEvent, APIGatewayProxyResult, SQSEvent } from "aws-lambda";
@@ -52,49 +52,55 @@ export const getPhotographer = async (
   try {
     const { handle } = event.pathParameters || {};
     console.log("Received request to get self for user id: ", handle);
-    const databaseUser = await UsersModel.query("handle").eq(handle).exec();
-    console.log("databaseUser: ", databaseUser);
-    if (!databaseUser.count) {
+    const databaseUsers = await UsersModel.query("handle").eq(handle).exec();
+    console.log("databaseUser: ", databaseUsers);
+    if (!databaseUsers.count) {
       throw new Error("User not found");
     }
 
-    if (!databaseUser[0]?.surfBreaks) {
-      console.log("No surf breaks found for photographer");
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true,
-        },
-        body: JSON.stringify({
-          message: `Successfully retrieved photographer.`,
-          results: {
-            user: { ...databaseUser[0], surfBreaksPopulated: {} }
-          }
-        }),
-      };
-    }
+    const photographerSurfPhotos = await SurfPhotosModel.query("PK").eq(`USER#${databaseUsers[0].id}`).exec();
+    const photographerSurfPhotosMap = {};
+    for (const surfPhoto of photographerSurfPhotos) {
+      const skParts = surfPhoto.SK.split("#");
+      const country = skParts[1];
+      const region = skParts[2];
+      const surfBreakName = skParts[3];
+      const photoDate = skParts[4];
+      const fileNameAndType = skParts[6];
 
-    const photographerSurfBreaks = {};
-    for (const country in databaseUser[0]?.surfBreaks) {
-      const countrySurfBreaks = databaseUser[0].surfBreaks[country];
-      for (const surfBreak in countrySurfBreaks) {
-        const surfBreakDates = countrySurfBreaks[surfBreak];
-        const latestSurfBreakDate = surfBreakDates[surfBreakDates.length - 1];
-        const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(S3Service.SURF_BUCKET, `${country}/${surfBreak}/${latestSurfBreakDate}/${handle}`);
-        for (const content of s3ReturnObject?.Contents ?? []) {
-          if (!photographerSurfBreaks[country]) {
-            photographerSurfBreaks[country] = [];
-          }
-          photographerSurfBreaks[surfBreak].push(
-            `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${content.Key}`
-          );
-          // exit loop after 10 images
-          if (photographerSurfBreaks[surfBreak].length >= 10) {
-            break;
-          }
-        }
+      const s3KeyParts = [
+        country,
+        surfBreakName,
+        photoDate,
+        handle,
+        fileNameAndType
+      ];
+
+      if (region !== "_") {
+        s3KeyParts.splice(1, 0, region);
       }
+      const s3Key = s3KeyParts.join("/");
+
+      if (!photographerSurfPhotosMap[surfBreakName]) {
+        photographerSurfPhotosMap[surfBreakName] = [];
+      }
+
+      if (photographerSurfPhotosMap[surfBreakName].length >= 10) {
+        continue;
+      }
+
+      const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(S3Service.SURF_BUCKET, s3Key);
+
+      if (!s3ReturnObject?.Contents?.length) {
+        console.log("No s3 objects found for key:", s3Key);
+        SurfPhotosModel.delete({ PK: `USER#${databaseUsers[0].id}`, SK: surfPhoto.SK });
+        continue;
+      }
+
+      photographerSurfPhotosMap[surfBreakName].push(
+        `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${s3Key}`
+      );
+
     }
 
     return {
@@ -106,7 +112,7 @@ export const getPhotographer = async (
       body: JSON.stringify({
         message: `Successfully retrieved photographer.`,
         results: {
-          user: { ...databaseUser[0], surfBreaksPopulated: photographerSurfBreaks }
+          photographer: { ...databaseUsers[0], surfBreaksPopulated: photographerSurfPhotosMap }
         }
       }),
     };

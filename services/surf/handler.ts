@@ -1,6 +1,6 @@
 import { SurfBreakMediaUploadProgressModel, SurfBreaksModel, SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
 import { S3Service } from "@/shared/s3_service";
-import { APIGatewayEvent, APIGatewayProxyResult, SQSEvent } from "aws-lambda";
+import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
 
 // ----------------------------- SURF MEDIA --------------------------------------
 
@@ -127,13 +127,13 @@ export const saveNewSurfBreakMedia = async (
     }
 
     // date as YYYY-MM-DD
-    const today = new Date().toISOString().split("T")[0];
+    const photoDate = body?.date ?? new Date().toISOString().split("T")[0];
     // const uuid = Math.random().toString(36).substring(2, 8); // start at index 2 to skip decimal point
 
     const keyParts = [
       body.country_identifier,
       body.surf_break,
-      body?.date ?? today,
+      photoDate,
       body.photographer,
       `${body.media_name}.${body.media_type.split("/")[1]}`, // TODO: may need to replace this with uuid incase of duplicate names
     ];
@@ -323,11 +323,11 @@ export const testSurfMediaForm = async (
           console.warn("Error creating presigned url.");
           continue;
         }
-        // await SurfPhotosModel.create({
-        //   PK: `USER#${users[0].id}`,
-        //   SK: `PHOTO#${s3Key.replace(/\//g, "#")}`,
-        //   s3Key,
-        // });
+        await SurfPhotosModel.create({
+          PK: `USER#${users[0].id}`,
+          SK: `PHOTO#${s3Key.replace(/\//g, "#")}`,
+          s3Key,
+        });
 
         presignedUrlMap = {
           ...presignedUrlMap,
@@ -461,92 +461,6 @@ export const saveSurfMedia = async (
         error: error,
       }),
     };
-  }
-};
-
-interface SQSSaveSurfMediaMessageBody {
-  upload_uuid: string;
-  country: string;
-  region: string;
-  surfBreak: string;
-  photographer: string;
-  mediaFiles: any[];
-}
-export const saveSurfMediaBatch = async (event: SQSEvent, context: any) => {
-  for (const record of event.Records) {
-    const sqsBody = record.body;
-    console.log("sqsBody:", sqsBody);
-    const saveSurfMediaBody: SQSSaveSurfMediaMessageBody =
-      JSON.parse(sqsBody);
-    const { upload_uuid, country, region, surfBreak, photographer, mediaFiles } = saveSurfMediaBody;
-
-    const databaseUser = await UsersModel.query("handle").eq(photographer).exec();
-    if (!databaseUser.count) {
-      console.warn("Photographer not found");
-      continue;
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-    for (const mediaFile of mediaFiles) {
-      // date as YYYY-MM-DD
-
-      const mediaFileDate = mediaFile?.lastModified ? new Date(mediaFile.lastModified).toISOString().split("T")[0] : today;
-      const keyParts = [
-        country,
-        surfBreak,
-        mediaFileDate,
-        photographer,
-        `${mediaFile.name}.${mediaFile.type.split("/")[1]}`, // TODO: may need to replace this with uuid incase of duplicate names
-      ];
-
-      const regionExists = region && region !== "0" && region !== "_";
-      if (regionExists) {
-        // insert region after country
-        keyParts.splice(1, 0, region);
-      }
-      const s3Key = keyParts.join("/");
-
-      const putUrl = await S3Service.createUploadPresignedUrl(
-        S3Service.SURF_BUCKET,
-        s3Key
-      );
-      if (!putUrl) {
-        console.warn("Error creating presigned url.");
-        continue;
-      }
-
-      await SurfPhotosModel.create({
-        PK: `USER#${databaseUser[0].id}`,
-        SK: `PHOTO#${s3Key.replace(/\//g, "#")}`,
-        s3Key,
-      });
-      console.log("Created photo record");
-
-      const uploadProgressSK = regionExists ? `UPLOAD#${country}#${region}#${surfBreak}#${upload_uuid}` : `UPLOAD#${country}#_#${surfBreak}#${upload_uuid}`;
-      const blob = new Blob([mediaFile], { type: mediaFile.type });
-      const config = {
-        headers: {
-          'Content-Type': mediaFile.type,
-        },
-      };
-      const response = await fetch(putUrl, {
-        method: 'PUT',
-        body: blob,
-        headers: config.headers, // Ensure `config.headers` is correctly formatted
-      });
-
-      if (response.ok) {
-        await SurfBreakMediaUploadProgressModel.update(
-          { PK: `USER#${databaseUser[0].id}`, SK: uploadProgressSK },
-          { $ADD: { success: 1 } }
-        );
-      } else {
-        await SurfBreakMediaUploadProgressModel.update(
-          { PK: `USER#${databaseUser[0].id}`, SK: uploadProgressSK },
-          { $ADD: { error: 1 } }
-        );
-      }
-    }
   }
 };
 

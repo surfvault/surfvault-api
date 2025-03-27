@@ -6,12 +6,6 @@ plugins: ${file(../../sls_common/plugins.yml):plugins}
 
 provider: ${file(../../sls_common/provider.yml):provider}
 
-constructs:
-  saveSurfMediaBatch:
-    type: queue
-    worker:
-      handler: handler.saveSurfMediaBatch
-
 functions:
   getSurfMedia:
     handler: handler.getSurfMedia
@@ -205,29 +199,6 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-
-    #**************************************************************
-    #                      SQS Queues
-    #**************************************************************
-    SaveSurfMediaBatchQueueDeadLetterQueue:
-      Type: "AWS::SQS::Queue"
-      Properties:
-        QueueName: "${self:provider.stage}-SaveSurfMediaBatchQueueDeadLetterQueue"
-        MessageRetentionPeriod: 1209600
-        DelaySeconds: 10
-
-    SaveSurfMediaBatchQueue:
-      Type: "AWS::SQS::Queue"
-      Properties:
-        QueueName: "${self:provider.stage}-SaveSurfMediaBatchQueue"
-        VisibilityTimeout: 60
-        MessageRetentionPeriod: 1209600
-        RedrivePolicy:
-          deadLetterTargetArn:
-            Fn::GetAtt:
-              - SaveSurfMediaBatchQueueDeadLetterQueue
-              - Arn
-          maxReceiveCount: 3
 
 custom:
   stage: "${opt:stage, self:provider.stage}"
