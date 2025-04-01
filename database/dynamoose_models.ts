@@ -137,6 +137,30 @@ const userSchema = new dynamoose.Schema({
         type: Object,
         default: {}
     },
+    currentLocation: {
+        type: String,
+        default: ""
+    },
+    instagram: {
+        type: String,
+        default: ""
+    },
+    website: {
+        type: String,
+        default: ""
+    },
+    youtube: {
+        type: String,
+        default: ""
+    },
+    bio: {
+        type: String,
+        default: ""
+    },
+    followers: {
+        type: Number,
+        default: 0
+    }
 }, {
     "saveUnknown": true,
     "timestamps": true
