@@ -34,7 +34,15 @@ functions:
     timeout: 30
     events:
       - httpApi:
-          path: /user/{id}
+          path: /user/{id}/handle
+          method: patch
+  
+  updateUserMetaData:
+    handler: handler.updateUserMetaData
+    timeout: 30
+    events:
+      - httpApi:
+          path: /user/{id}/meta
           method: patch
 
 custom:

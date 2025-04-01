@@ -220,6 +220,56 @@ export const updateUserHandle = async (
   }
 };
 
+export const updateUserMetaData = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { id } = event.pathParameters || {};
+    if (!id) {
+      throw new Error("User id is required");
+    }
+
+    const payload: { currentLocation?: string; name?: string; bio?: string; instragram?: string; website?: string; youtube?: string; } = JSON.parse(event.body || "{}");
+    console.log("Received request to update the following meta data for user id: ", id, payload);
+
+    const databaseUser = await UsersModel.query("id").eq(id).exec();
+    console.log("databaseUser: ", databaseUser);
+    if (!databaseUser.count) {
+      throw new Error("User not found");
+    }
+
+    await UsersModel.update({ id, email: databaseUser[0]?.email }, payload);
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully updated user handle.`,
+        results: {
+          success: true
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error updating user handle: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error updating handle",
+        error: error,
+      }),
+    };
+  }
+};
+
 interface SQSUpdateS3PhotographerHandleMessageBody {
   country: string;
   userId: string;
