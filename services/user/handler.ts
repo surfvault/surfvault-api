@@ -240,7 +240,7 @@ export const updateUserMetaData = async (
     }
 
     let profilePicPresignedUrl = '';
-    if (payload.picture) {
+    if (payload?.picture) {
       const s3Key = `${databaseUser[0].handle}.jpg`;
       payload.picture = `https://${S3Service.PROFILE_PIC_BUCKET}.s3.amazonaws.com/${s3Key}`;
       profilePicPresignedUrl = await S3Service.createUploadPresignedUrl(S3Service.PROFILE_PIC_BUCKET, s3Key, 3600);
