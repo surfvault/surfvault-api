@@ -35,6 +35,8 @@ provider:
           Resource:
             - "arn:aws:s3:::${self:provider.stage}-surf"
             - "arn:aws:s3:::${self:provider.stage}-surf/*"
+            - "arn:aws:s3:::${self:provider.stage}-user-profile"
+            - "arn:aws:s3:::${self:provider.stage}-user-profile/*"
         - Effect: Allow
           Action:
             - lambda:InvokeFunction

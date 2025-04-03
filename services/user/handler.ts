@@ -230,7 +230,7 @@ export const updateUserMetaData = async (
       throw new Error("User id is required");
     }
 
-    const payload: { currentLocation?: string; name?: string; bio?: string; instragram?: string; website?: string; youtube?: string; } = JSON.parse(event.body || "{}");
+    const payload: { currentLocation?: string; name?: string; bio?: string; instragram?: string; website?: string; youtube?: string; picture?: string; } = JSON.parse(event.body || "{}");
     console.log("Received request to update the following meta data for user id: ", id, payload);
 
     const databaseUser = await UsersModel.query("id").eq(id).exec();
@@ -239,6 +239,12 @@ export const updateUserMetaData = async (
       throw new Error("User not found");
     }
 
+    let profilePicPresignedUrl = '';
+    if (payload.picture) {
+      const s3Key = `${databaseUser[0].handle}.jpg`;
+      payload.picture = `https://${S3Service.PROFILE_PIC_BUCKET}.s3.amazonaws.com/${s3Key}`;
+      profilePicPresignedUrl = await S3Service.createUploadPresignedUrl(S3Service.PROFILE_PIC_BUCKET, s3Key, 3600);
+    }
     await UsersModel.update({ id, email: databaseUser[0]?.email }, payload);
 
     return {
@@ -250,7 +256,8 @@ export const updateUserMetaData = async (
       body: JSON.stringify({
         message: `Successfully updated user handle.`,
         results: {
-          success: true
+          success: true,
+          profilePicPresignedUrl
         }
       }),
     };

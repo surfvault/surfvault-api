@@ -74,3 +74,53 @@ resources:
               - Arn
           maxReceiveCount: 3
 
+    #**************************************************************
+    #                      S3 Buckets
+    #**************************************************************
+    ProfileBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: ${self:provider.stage}-surf-profile
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: BucketOwnerEnforced
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - HEAD
+                - PUT
+                - POST
+              AllowedOrigins:
+                - "*"
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          IgnorePublicAcls: false
+          BlockPublicPolicy: false
+          RestrictPublicBuckets: false
+
+    ProfileBucketOriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Description: "Restrict access to the media bucket"
+          Name: "${self:provider.stage}-ProfileBucketOriginAccessControl"
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+    ProfileBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref ProfileBucket
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: "${self:provider.stage}-ProfileBucketPolicy"
+              Effect: "Allow"
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource: !Sub "arn:aws:s3:::${ProfileBucket}/*"
+

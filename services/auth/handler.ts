@@ -41,7 +41,7 @@ export const login = async (
       };
     }
 
-    const result = await UsersModel.update({ id: databaseUser[0].id, email }, { name, picture, coordinates: { latitude, longitude } });
+    const result = await UsersModel.update({ id: databaseUser[0].id, email }, { name, coordinates: { latitude, longitude } });
 
     return {
       statusCode: 200,
