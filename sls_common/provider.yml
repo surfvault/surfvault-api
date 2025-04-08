@@ -14,6 +14,7 @@ provider:
   environment: 
     STAGE: ${self:provider.stage}
     UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/588738616160/user-service-dev-cf-updateS3PhotographerHandle
+    UPDATE_S3_PHOTOGRAPHER_ACCESS_SQS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/588738616160/user-service-dev-cf-updateS3PhotographerAccess
     SAVE_SURF_MEDIA_BATCH_SQS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/588738616160/surf-service-dev-cf-saveSurfMediaBatch
     AWS_KEY_ID: ${env:AWS_KEY_ID}
     AWS_KEY_SECRET: ${env:AWS_KEY_SECRET}
@@ -35,8 +36,10 @@ provider:
           Resource:
             - "arn:aws:s3:::${self:provider.stage}-surf"
             - "arn:aws:s3:::${self:provider.stage}-surf/*"
-            - "arn:aws:s3:::${self:provider.stage}-user-profile"
-            - "arn:aws:s3:::${self:provider.stage}-user-profile/*"
+            - "arn:aws:s3:::${self:provider.stage}-surf-private"
+            - "arn:aws:s3:::${self:provider.stage}-surf-private/*"
+            - "arn:aws:s3:::${self:provider.stage}-surf-profile"
+            - "arn:aws:s3:::${self:provider.stage}-surf-profile/*"
         - Effect: Allow
           Action:
             - lambda:InvokeFunction

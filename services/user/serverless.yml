@@ -11,6 +11,11 @@ constructs:
     type: queue
     worker:
       handler: handler.updateS3PhotographerHandle
+  
+  updateS3PhotographerAccess:
+    type: queue
+    worker:
+      handler: handler.updateS3PhotographerAccess
 
 functions:
   getSelf:
@@ -71,6 +76,26 @@ resources:
           deadLetterTargetArn:
             Fn::GetAtt:
               - UpdateS3PhotographerHandleQueueDeadLetterQueue
+              - Arn
+          maxReceiveCount: 3
+    
+    UpdateS3PhotographerAccessQueueDeadLetterQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "${self:provider.stage}-UpdateS3PhotographerAccessQueueDeadLetterQueue"
+        MessageRetentionPeriod: 1209600
+        DelaySeconds: 10
+
+    UpdateS3PhotographerAccessQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "${self:provider.stage}-UpdateS3PhotographerAccessQueue"
+        VisibilityTimeout: 60
+        MessageRetentionPeriod: 1209600
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - UpdateS3PhotographerAccessQueueDeadLetterQueue
               - Arn
           maxReceiveCount: 3
 

@@ -230,7 +230,7 @@ export const updateUserMetaData = async (
       throw new Error("User id is required");
     }
 
-    const payload: { currentLocation?: string; name?: string; bio?: string; instragram?: string; website?: string; youtube?: string; picture?: string; } = JSON.parse(event.body || "{}");
+    const payload: { currentLocation?: string; name?: string; bio?: string; instragram?: string; website?: string; youtube?: string; picture?: string; access?: "private" | "public"; } = JSON.parse(event.body || "{}");
     console.log("Received request to update the following meta data for user id: ", id, payload);
 
     const databaseUser = await UsersModel.query("id").eq(id).exec();
@@ -245,7 +245,18 @@ export const updateUserMetaData = async (
       payload.picture = `https://${S3Service.PROFILE_PIC_BUCKET}.s3.amazonaws.com/${s3Key}`;
       profilePicPresignedUrl = await S3Service.createUploadPresignedUrl(S3Service.PROFILE_PIC_BUCKET, s3Key, 3600);
     }
+
     await UsersModel.update({ id, email: databaseUser[0]?.email }, payload);
+
+    if (payload?.access) {
+      await SQSService.sendMessage(
+        process.env.UPDATE_S3_PHOTOGRAPHER_ACCESS_SQS_QUEUE_URL,
+        JSON.stringify({
+          userId: id,
+          access: payload.access
+        })
+      );
+    }
 
     return {
       statusCode: 200,
@@ -277,6 +288,7 @@ export const updateUserMetaData = async (
   }
 };
 
+// TODO monetization opportunity with 1 free handle change then pay to update after?
 interface SQSUpdateS3PhotographerHandleMessageBody {
   country: string;
   userId: string;
@@ -326,5 +338,46 @@ export const updateS3PhotographerHandle = async (event: SQSEvent, context: any) 
     } else {
       console.log("All s3 objects in the following country updated for user", userId, country);
     }
+  }
+};
+
+interface SQSUpdateS3PhotographerAccessMessageBody {
+  userId: string;
+  access: "private" | "public";
+  continuationToken?: string;
+}
+export const updateS3PhotographerAccess = async (event: SQSEvent, context: any) => {
+  for (const record of event.Records) {
+    const sqsBody = record.body;
+    console.log("sqsBody:", sqsBody);
+    const updateS3PhotographerHandleBody: SQSUpdateS3PhotographerAccessMessageBody =
+      JSON.parse(sqsBody);
+    const { userId, access } = updateS3PhotographerHandleBody;
+
+    if (access !== "private" && access !== "public") {
+      console.error("Invalid access type: ", access);
+      throw new Error("Invalid access type");
+    }
+
+    const originalBucket = access === "private" ? S3Service.SURF_BUCKET : S3Service.SURF_BUCKET_PRIVATE;
+    const targetBucket = access === "private" ? S3Service.SURF_BUCKET_PRIVATE : S3Service.SURF_BUCKET;
+
+    const userPhotos = await SurfPhotosModel.query("PK").eq(`USER#${userId}`).exec();
+    for (const photo of userPhotos) {
+      const s3KeyParts = photo.SK.split("#");
+      const s3Key = s3KeyParts.join("/");
+      const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(originalBucket, s3Key);
+      const content = s3ReturnObject?.Contents?.[0];
+
+      if (!content || !s3ReturnObject.KeyCount) {
+        console.log('photo already migrated, skipping:', photo.SK);
+        continue;
+      }
+
+      await S3Service.copyS3Object(originalBucket, content.Key, targetBucket, content.Key);
+      await S3Service.deleteS3Object(originalBucket, content.Key);
+    }
+
+    console.log("All s3 objects migrated for user: ", userId, " to ", access, " bucket");
   }
 };

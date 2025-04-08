@@ -15,6 +15,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 export class S3Service {
   private static _s3: S3Client | null = null;
   public static readonly SURF_BUCKET = `${process.env.STAGE}-surf`;
+  public static readonly SURF_BUCKET_PRIVATE = `${process.env.STAGE}-surf-private`;
   public static readonly PROFILE_PIC_BUCKET = `${process.env.STAGE}-surf-profile`;
 
   public static _getS3(): S3Client {

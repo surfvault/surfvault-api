@@ -160,6 +160,11 @@ const userSchema = new dynamoose.Schema({
     followers: {
         type: Number,
         default: 0
+    },
+    access: {
+        type: String,
+        enum: ['private', 'public'],
+        default: 'public'
     }
 }, {
     "saveUnknown": true,
