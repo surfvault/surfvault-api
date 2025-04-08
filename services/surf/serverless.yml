@@ -131,6 +131,53 @@ resources:
               Action: "s3:GetObject"
               Resource: !Sub "arn:aws:s3:::${SurfBucket}/*"
 
+    PrivateSurfBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: ${self:provider.stage}-surf-private
+        OwnershipControls:
+          Rules:
+            - ObjectOwnership: BucketOwnerEnforced
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - "*"
+              AllowedMethods:
+                - GET
+                - HEAD
+                - PUT
+                - POST
+              AllowedOrigins:
+                - "*"
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          IgnorePublicAcls: false
+          BlockPublicPolicy: false
+          RestrictPublicBuckets: false
+
+    PrivateSurfBucketOriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Description: "Restrict access to the media bucket"
+          Name: "${self:provider.stage}-PrivateSurfBucketOriginAccessControl"
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+    PrivateSurfBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref PrivateSurfBucket
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: "${self:provider.stage}-PrivateSurfBucketPolicy"
+              Effect: "Allow"
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource: !Sub "arn:aws:s3:::${PrivateSurfBucket}/*"
+
     #**************************************************************
     #                      DynamoDB Tables
     #**************************************************************
