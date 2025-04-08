@@ -143,8 +143,9 @@ export const saveNewSurfBreakMedia = async (
     }
     const s3Key = keyParts.join("/");
 
+    const s3Bucket = users[0].access === "private" ? S3Service.SURF_BUCKET_PRIVATE : S3Service.SURF_BUCKET;
     const putUrl = await S3Service.createUploadPresignedUrl(
-      S3Service.SURF_BUCKET,
+      s3Bucket,
       s3Key
     );
     if (!putUrl) {
@@ -157,7 +158,7 @@ export const saveNewSurfBreakMedia = async (
       s3Key,
     });
 
-    const mediaUrl = `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${s3Key}`;
+    const mediaUrl = `https://${s3Bucket}.s3.amazonaws.com/${s3Key}`;
     console.log("mediaUrl", mediaUrl);
 
     return {
@@ -295,6 +296,7 @@ export const testSurfMediaForm = async (
 
     const today = new Date().toISOString().split("T")[0];
 
+    const s3Bucket = users[0].access === "private" ? S3Service.SURF_BUCKET_PRIVATE : S3Service.SURF_BUCKET;
     let presignedUrlMap = {};
     for (let i = 0; i < body.mediaFiles.length; i++) {
       const mediaFile = body.mediaFiles[i];
@@ -316,7 +318,7 @@ export const testSurfMediaForm = async (
 
       try {
         const presignedUrl = await S3Service.createUploadPresignedUrl(
-          S3Service.SURF_BUCKET,
+          s3Bucket,
           s3Key
         );
         if (!presignedUrl) {

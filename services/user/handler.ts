@@ -58,6 +58,10 @@ export const getPhotographer = async (
       throw new Error("User not found");
     }
 
+    const { self } = event.queryStringParameters || {};
+
+    const s3Bucket = self === "true" && databaseUsers[0].access === "private" ? S3Service.SURF_BUCKET_PRIVATE : S3Service.SURF_BUCKET;
+
     const photographerSurfPhotos = await SurfPhotosModel.query("PK").eq(`USER#${databaseUsers[0].id}`).exec();
     const photographerSurfPhotosMap = {};
     for (const surfPhoto of photographerSurfPhotos) {
@@ -89,7 +93,7 @@ export const getPhotographer = async (
         continue;
       }
 
-      const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(S3Service.SURF_BUCKET, s3Key);
+      const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(s3Bucket, s3Key);
 
       if (!s3ReturnObject?.Contents?.length) {
         console.log("No s3 objects found for key:", s3Key);
@@ -98,9 +102,8 @@ export const getPhotographer = async (
       }
 
       photographerSurfPhotosMap[surfBreakName].push(
-        `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${s3Key}`
+        `https://${s3Bucket}.s3.amazonaws.com/${s3Key}`
       );
-
     }
 
     return {
@@ -364,7 +367,7 @@ export const updateS3PhotographerAccess = async (event: SQSEvent, context: any) 
 
     const userPhotos = await SurfPhotosModel.query("PK").eq(`USER#${userId}`).exec();
     for (const photo of userPhotos) {
-      const s3KeyParts = photo.SK.split("#");
+      const s3KeyParts = photo.SK.replace("PHOTO#", "").split("#");
       const s3Key = s3KeyParts.join("/");
       const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(originalBucket, s3Key);
       const content = s3ReturnObject?.Contents?.[0];
