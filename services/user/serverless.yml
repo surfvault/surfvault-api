@@ -49,6 +49,14 @@ functions:
       - httpApi:
           path: /user/{id}/meta
           method: patch
+  
+  followPhotographer:
+    handler: handler.followPhotographer
+    timeout: 30
+    events:
+      - httpApi:
+          path: /user/{id}/follow
+          method: patch
 
 custom:
   stage: "${opt:stage, self:provider.stage}"
