@@ -97,7 +97,7 @@ export const getPhotographer = async (
 
       if (!s3ReturnObject?.Contents?.length) {
         console.log("No s3 objects found for key:", s3Key);
-        SurfPhotosModel.delete({ PK: `USER#${databaseUsers[0].id}`, SK: surfPhoto.SK });
+        // SurfPhotosModel.delete({ PK: `USER#${databaseUsers[0].id}`, SK: surfPhoto.SK });
         continue;
       }
 
@@ -244,7 +244,8 @@ export const updateUserMetaData = async (
 
     let profilePicPresignedUrl = '';
     if (payload?.picture) {
-      const s3Key = `${databaseUser[0].handle}.jpg`;
+      const picType = payload.picture.split("/")[1];
+      const s3Key = `${databaseUser[0].handle}.${picType}`;
       payload.picture = `https://${S3Service.PROFILE_PIC_BUCKET}.s3.amazonaws.com/${s3Key}`;
       profilePicPresignedUrl = await S3Service.createUploadPresignedUrl(S3Service.PROFILE_PIC_BUCKET, s3Key, 3600);
     }
@@ -272,6 +273,70 @@ export const updateUserMetaData = async (
         results: {
           success: true,
           profilePicPresignedUrl
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error updating user handle: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error updating handle",
+        error: error,
+      }),
+    };
+  }
+};
+
+export const followPhotographer = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { id } = event.pathParameters || {};
+    if (!id) {
+      throw new Error("User id is required");
+    }
+
+    const payload: { photographerUserId?: string; action: "follow" | "unfollow"; } = JSON.parse(event.body || "{}");
+    console.log("Received request to follow a photographer for user id: ", id, payload);
+
+    const databaseUser = await UsersModel.query("id").eq(id).exec();
+    if (!databaseUser.count) {
+      throw new Error("User not found");
+    }
+
+    const photographerUser = await UsersModel.query("id").eq(payload.photographerUserId).exec();
+    if (!photographerUser.count) {
+      throw new Error("Photographer not found");
+    }
+
+    if (payload.action === 'follow') {
+      const updatedFollowing = [...(databaseUser[0]?.following || []), payload.photographerUserId];
+      await UsersModel.update({ id, email: databaseUser[0]?.email }, { following: updatedFollowing });
+      const updatedFollowers = [...(photographerUser[0]?.followers || []), id];
+      await UsersModel.update({ id: payload.photographerUserId, email: photographerUser[0]?.email }, { followers: updatedFollowers });
+    } else {
+      const updatedFollowing = (databaseUser[0]?.following || []).filter((userId: string) => userId !== payload.photographerUserId);
+      await UsersModel.update({ id, email: databaseUser[0]?.email }, { following: updatedFollowing });
+      const updatedFollowers = (photographerUser[0]?.followers || []).filter((userId: string) => userId !== id);
+      await UsersModel.update({ id: payload.photographerUserId, email: photographerUser[0]?.email }, { followers: updatedFollowers });
+    }
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully updated user handle.`,
+        results: {
+          success: true,
         }
       }),
     };
@@ -366,7 +431,8 @@ export const updateS3PhotographerAccess = async (event: SQSEvent, context: any) 
     const targetBucket = access === "private" ? S3Service.SURF_BUCKET_PRIVATE : S3Service.SURF_BUCKET;
 
     const userPhotos = await SurfPhotosModel.query("PK").eq(`USER#${userId}`).exec();
-    for (const photo of userPhotos) {
+    for (let i = 0; i < userPhotos.length; i++) {
+      const photo = userPhotos[i];
       const s3KeyParts = photo.SK.replace("PHOTO#", "").split("#");
       const s3Key = s3KeyParts.join("/");
       const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(originalBucket, s3Key);

@@ -158,8 +158,12 @@ const userSchema = new dynamoose.Schema({
         default: ""
     },
     followers: {
-        type: Number,
-        default: 0
+        type: Array,
+        default: []
+    },
+    following: {
+        type: Array,
+        default: []
     },
     access: {
         type: String,
