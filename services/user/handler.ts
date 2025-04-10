@@ -223,6 +223,63 @@ export const updateUserHandle = async (
   }
 };
 
+export const updateUserFavorites = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { id } = event.pathParameters || {};
+    if (!id) {
+      throw new Error("User id is required");
+    }
+
+    const payload: { surfBreakIdentifier: string; action: "favorite" | "unfavorite"; } = JSON.parse(event.body || "{}");
+    console.log("Received request to update favorites for user id: ", id, payload);
+
+    const databaseUser = await UsersModel.query("id").eq(id).exec();
+    console.log("databaseUser: ", databaseUser);
+    if (!databaseUser.count) {
+      throw new Error("User not found");
+    }
+
+    if (payload.action === 'favorite') {
+      const updatedFavorites = [...(databaseUser[0]?.favorites || []), payload.surfBreakIdentifier];
+      await UsersModel.update({ id, email: databaseUser[0]?.email }, { favorites: updatedFavorites });
+    } else {
+      const updatedFavorites = (databaseUser[0]?.favorites || []).filter((surfBreakId: string) => surfBreakId !== payload.surfBreakIdentifier);
+      await UsersModel.update({ id, email: databaseUser[0]?.email }, { favorites: updatedFavorites });
+    }
+
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully updated user handle.`,
+        results: {
+          success: true
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error updating user handle: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error updating handle",
+        error: error,
+      }),
+    };
+  }
+};
+
 export const updateUserMetaData = async (
   event: APIGatewayEvent,
   context: any

@@ -42,6 +42,14 @@ functions:
           path: /user/{id}/handle
           method: patch
   
+  updateUserFavorites:
+    handler: handler.updateUserFavorites
+    timeout: 30
+    events:
+      - httpApi:
+          path: /user/{id}/favorites
+          method: patch
+  
   updateUserMetaData:
     handler: handler.updateUserMetaData
     timeout: 30
