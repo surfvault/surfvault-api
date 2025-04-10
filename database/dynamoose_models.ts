@@ -158,11 +158,15 @@ const userSchema = new dynamoose.Schema({
         default: ""
     },
     followers: {
-        type: Array,
+        type: Array, // Array of user IDs
         default: []
     },
     following: {
-        type: Array,
+        type: Array, // Array of user IDs
+        default: []
+    },
+    favorites: {
+        type: Array, // Array of surf break PK-SKs
         default: []
     },
     access: {
