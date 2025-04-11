@@ -2,6 +2,7 @@ import { SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
 import { S3Service } from "@/shared/s3_service";
 import { SQSService } from "@/shared/sqs_service";
 import { APIGatewayEvent, APIGatewayProxyResult, SQSEvent } from "aws-lambda";
+import { findPictureForEachUserFavorite, findProfilePictureForEachUserFollowing } from "helpers";
 
 export const getSelf = async (
   event: APIGatewayEvent,
@@ -16,6 +17,15 @@ export const getSelf = async (
       throw new Error("User not found");
     }
 
+    const userFavoritesWithThumbnails = await findPictureForEachUserFavorite(databaseUser[0]?.favorites || [], databaseUser[0].access);
+    const userFollowingWithThumbnails = await findProfilePictureForEachUserFollowing(databaseUser[0]?.following || []);
+
+    const myUser = {
+      ...databaseUser[0],
+      favoritesWithThumbnails: userFavoritesWithThumbnails,
+      followingWithProfilePics: userFollowingWithThumbnails,
+    };
+
     return {
       statusCode: 200,
       headers: {
@@ -25,7 +35,7 @@ export const getSelf = async (
       body: JSON.stringify({
         message: `Successfully retrieved self.`,
         results: {
-          user: databaseUser[0]
+          user: myUser
         }
       }),
     };
