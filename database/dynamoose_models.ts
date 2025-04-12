@@ -38,7 +38,6 @@ const surfBreakSchema = new dynamoose.Schema({
 });
 export const SurfBreaksModel = dynamoose.model(`${process.env.STAGE}-SurfBreaks`, surfBreakSchema, { create: false });
 
-
 const surfPhotoSchema = new dynamoose.Schema({
     PK: {
         type: String,
@@ -179,3 +178,84 @@ const userSchema = new dynamoose.Schema({
     "timestamps": true
 });
 export const UsersModel = dynamoose.model(`${process.env.STAGE}-Users`, userSchema, { create: false });
+
+const conversationSchema = new dynamoose.Schema(
+    {
+        id: {
+            type: String,
+            required: true,
+            hashKey: true
+        },
+        userId: {
+            type: String,
+            required: true,
+            rangeKey: true,
+            index: {
+                type: 'global', // Make this a global secondary index
+                name: 'UserIndex', // Index name
+                project: true, // Project all attributes
+            },
+        },
+        photographer: {
+            type: String, // user id
+            required: true,
+        },
+        lastMessage: {
+            type: String,
+            required: false,
+            default: "",
+        },
+        unreadMessages: {
+            type: Number,
+            default: 0,
+        },
+    },
+    { timestamps: true }
+);
+export const ConversationsModel = dynamoose.model(`${process.env.STAGE}-Conversations`, conversationSchema, { create: false });
+
+/* ------------------------------------- Message ------------------------------------- */
+export const messageSchema = new dynamoose.Schema(
+    {
+        id: {
+            type: String,
+            required: true,
+            hashKey: true,
+        },
+        conversationId: {
+            type: String,
+            required: true,
+            rangeKey: true,
+            index: {
+                type: "global", // Make this a global secondary index
+                name: "ConversationIndex", // Index name
+                project: true, // Project all attributes
+            },
+        },
+        to: {
+            type: String, // user id
+            required: true,
+        },
+        from: {
+            type: String, // user id
+            required: true,
+        },
+        body: {
+            type: String,
+            required: false,
+            default: "",
+        },
+        media: {
+            type: Array,
+            required: false,
+            default: [],
+        },
+        error: {
+            type: String,
+            required: false,
+            default: "",
+        },
+    },
+    { timestamps: true }
+);
+export const MessagesModel = dynamoose.model(`${process.env.STAGE}-Messages`, messageSchema, { create: false });
