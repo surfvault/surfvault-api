@@ -10,3 +10,6 @@ services:
 
   user:
     path: services/user
+  
+  conversation:
+    path: services/conversation

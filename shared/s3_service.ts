@@ -17,6 +17,7 @@ export class S3Service {
   public static readonly SURF_BUCKET = `${process.env.STAGE}-surf`;
   public static readonly SURF_BUCKET_PRIVATE = `${process.env.STAGE}-surf-private`;
   public static readonly PROFILE_PIC_BUCKET = `${process.env.STAGE}-surf-profile`;
+  public static readonly CONVERSATION_MEDIA_BUCKET = `${process.env.STAGE}-conversation-media`;
 
   public static _getS3(): S3Client {
     if (S3Service._s3) {
@@ -26,13 +27,6 @@ export class S3Service {
     const options: S3ClientConfig = {
       region: 'us-east-1',
     };
-
-    // if (Utils.isOffline()) {
-    //   console.log("Using LocalStack for S3");
-    //   //If it's offline then use localstack
-    //   options.endpoint = process.env.LOCALSTACK_HOST;
-    //   options.forcePathStyle = true;
-    // }
 
     return (S3Service._s3 = new S3Client(options));
   }

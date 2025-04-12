@@ -57,6 +57,8 @@ provider:
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Users"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfPhotos"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfBreaks"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Conversations"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Messages"
         - Effect: "Allow"
           Action:
             - "sqs:SendMessage"
