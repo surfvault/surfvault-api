@@ -196,9 +196,14 @@ const conversationSchema = new dynamoose.Schema(
                 project: true, // Project all attributes
             },
         },
-        photographer: {
+        photographerId: {
             type: String, // user id
             required: true,
+            index: {
+                type: 'global',
+                name: 'PhotographerIndex',
+                project: true,
+            }
         },
         lastMessage: {
             type: String,
@@ -232,11 +237,7 @@ export const messageSchema = new dynamoose.Schema(
                 project: true, // Project all attributes
             },
         },
-        to: {
-            type: String, // user id
-            required: true,
-        },
-        from: {
+        sender: {
             type: String, // user id
             required: true,
         },

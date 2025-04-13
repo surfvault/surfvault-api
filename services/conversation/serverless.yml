@@ -15,6 +15,14 @@ functions:
           path: /conversations/{userId}
           method: get
 
+  startConversationWithPhotographer:
+    handler: handler.startConversationWithPhotographer
+    timeout: 30
+    events:
+      - httpApi:
+          path: /conversations/{userId}/start/{photographerId}
+          method: post
+
 resources:
   Resources:
     #**************************************************************
@@ -79,6 +87,8 @@ resources:
             AttributeType: S
           - AttributeName: userId
             AttributeType: S
+          - AttributeName: photographerId
+            AttributeType: S
         KeySchema:
           - AttributeName: id
             KeyType: HASH
@@ -91,6 +101,15 @@ resources:
           - IndexName: UserIndex
             KeySchema:
               - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL # Project all attributes
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          - IndexName: PhotographerIndex
+            KeySchema:
+              - AttributeName: photographerId
                 KeyType: HASH
             Projection:
               ProjectionType: ALL # Project all attributes
