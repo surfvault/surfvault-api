@@ -1,4 +1,4 @@
-import { SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
+import { ConversationsModel, SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
 import { S3Service } from "@/shared/s3_service";
 import { SQSService } from "@/shared/sqs_service";
 import { APIGatewayEvent, APIGatewayProxyResult, SQSEvent } from "aws-lambda";
@@ -17,6 +17,8 @@ export const getSelf = async (
       throw new Error("User not found");
     }
 
+    const conversations = await ConversationsModel.query("userId").eq(id).exec();
+
     const userFavoritesWithThumbnails = await findPictureForEachUserFavorite(databaseUser[0]?.favorites || [], databaseUser[0].access);
     const userFollowingWithThumbnails = await findProfilePictureForEachUserFollowing(databaseUser[0]?.following || []);
 
@@ -24,6 +26,7 @@ export const getSelf = async (
       ...databaseUser[0],
       favoritesWithThumbnails: userFavoritesWithThumbnails,
       followingWithProfilePics: userFollowingWithThumbnails,
+      conversations
     };
 
     return {
