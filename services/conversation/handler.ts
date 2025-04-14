@@ -162,6 +162,8 @@ export const getConversationWithMessages = async (
     const userData = await UsersModel.query("id").eq(databaseConversation[0].userId).exec();
     const messages = await MessagesModel.query("conversationId").eq(conversationId).exec();
 
+    const sortedMessages = messages.sort((a, b) => a.updatedAt - b.updatedAt);
+
     return {
       statusCode: 200,
       headers: {
@@ -175,7 +177,7 @@ export const getConversationWithMessages = async (
             ...databaseConversation[0],
             photographerData: photographerData?.[0],
             userData: userData?.[0],
-            messages,
+            messages: sortedMessages,
           },
         }
       }),
@@ -190,6 +192,68 @@ export const getConversationWithMessages = async (
       },
       body: JSON.stringify({
         message: "Error getting conversation",
+        error: error,
+      }),
+    };
+  }
+};
+
+export const replyToConversation = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { conversationId, userId } = event.pathParameters || {};
+    if (!conversationId) {
+      throw new Error("conversationId is required");
+    }
+    if (!userId) {
+      throw new Error("userId is required");
+    }
+
+    const databaseConversation = await ConversationsModel.query("id").eq(conversationId).exec();
+    console.log("databaseConversation: ", databaseConversation);
+    if (!databaseConversation.count) {
+      throw new Error("Conversation not found");
+    }
+
+    const { message } = JSON.parse(event.body || "{}");
+
+    await MessagesModel.create({
+      id: uuidv4(),
+      conversationId: conversationId,
+      sender: userId,
+      body: message,
+    });
+
+    await ConversationsModel.update({
+      id: conversationId,
+      lastMessage: message,
+    });
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully replied to conversation`,
+        results: {
+          success: true,
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error replying to conversation: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error replying to conversation",
         error: error,
       }),
     };
