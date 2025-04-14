@@ -30,6 +30,14 @@ functions:
       - httpApi:
           path: /conversation/{conversationId}
           method: get
+  
+  replyToConversation:
+    handler: handler.replyToConversation
+    timeout: 30
+    events:
+      - httpApi:
+          path: /conversation/{conversationId}/reply/{userId}
+          method: post
 
 resources:
   Resources:
