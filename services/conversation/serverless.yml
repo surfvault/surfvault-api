@@ -23,6 +23,14 @@ functions:
           path: /conversations/{userId}/start/{photographerId}
           method: post
 
+  getConversationWithMessages:
+    handler: handler.getConversationWithMessages
+    timeout: 30
+    events:
+      - httpApi:
+          path: /conversation/{conversationId}
+          method: get
+
 resources:
   Resources:
     #**************************************************************

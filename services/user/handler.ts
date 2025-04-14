@@ -17,7 +17,13 @@ export const getSelf = async (
       throw new Error("User not found");
     }
 
-    const conversations = await ConversationsModel.query("userId").eq(id).exec();
+    const [byUser, byPhotographer] = await Promise.all([
+      ConversationsModel.query("userId").eq(id).exec(),
+      ConversationsModel.query("photographerId").eq(id).exec(),
+    ]);
+
+    // merge + dedupe if needed
+    const mergedConversations = [...byUser, ...byPhotographer];
 
     const userFavoritesWithThumbnails = await findPictureForEachUserFavorite(databaseUser[0]?.favorites || [], databaseUser[0].access);
     const userFollowingWithThumbnails = await findProfilePictureForEachUserFollowing(databaseUser[0]?.following || []);
@@ -26,7 +32,7 @@ export const getSelf = async (
       ...databaseUser[0],
       favoritesWithThumbnails: userFavoritesWithThumbnails,
       followingWithProfilePics: userFollowingWithThumbnails,
-      conversations
+      conversations: mergedConversations
     };
 
     return {
