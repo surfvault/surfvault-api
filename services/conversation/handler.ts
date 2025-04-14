@@ -26,6 +26,7 @@ export const getConversations = async (
 
     // merge + dedupe if needed
     const mergedConversations = [...byUser, ...byPhotographer];
+    console.log("mergedConversations: ", mergedConversations);
 
     const conversationsPopulated = await Promise.all(
       mergedConversations.map(async (conversation) => {
@@ -135,6 +136,60 @@ export const startConversationWithPhotographer = async (
       },
       body: JSON.stringify({
         message: "Error starting conversation w/ photographer",
+        error: error,
+      }),
+    };
+  }
+};
+
+export const getConversationWithMessages = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { conversationId } = event.pathParameters || {};
+    if (!conversationId) {
+      throw new Error("conversationId is required");
+    }
+
+    const databaseConversation = await ConversationsModel.query("id").eq(conversationId).exec();
+    console.log("databaseConversation: ", databaseConversation);
+    if (!databaseConversation.count) {
+      throw new Error("Conversation not found");
+    }
+
+    const photographerData = await UsersModel.query("id").eq(databaseConversation[0].photographerId).exec();
+    const userData = await UsersModel.query("id").eq(databaseConversation[0].userId).exec();
+    const messages = await MessagesModel.query("conversationId").eq(conversationId).exec();
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully retrieved conversation`,
+        results: {
+          conversation: {
+            ...databaseConversation[0],
+            photographerData: photographerData?.[0],
+            userData: userData?.[0],
+            messages,
+          },
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error getting conversation: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error getting conversation",
         error: error,
       }),
     };
