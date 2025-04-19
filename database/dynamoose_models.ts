@@ -219,7 +219,6 @@ const conversationSchema = new dynamoose.Schema(
 );
 export const ConversationsModel = dynamoose.model(`${process.env.STAGE}-Conversations`, conversationSchema, { create: false });
 
-/* ------------------------------------- Message ------------------------------------- */
 export const messageSchema = new dynamoose.Schema(
     {
         id: {
@@ -260,3 +259,44 @@ export const messageSchema = new dynamoose.Schema(
     { timestamps: true }
 );
 export const MessagesModel = dynamoose.model(`${process.env.STAGE}-Messages`, messageSchema, { create: false });
+
+export const notificationSchema = new dynamoose.Schema(
+    {
+        id: {
+            type: String,
+            required: true,
+            hashKey: true,
+        },
+        userId: {
+            type: String,
+            required: true,
+            rangeKey: true,
+            index: {
+                type: "global", // Make this a global secondary index
+                name: "UserIndex", // Index name
+                project: true, // Project all attributes
+            },
+        },
+        body: {
+            type: String,
+            required: false,
+            default: "",
+        },
+        read: {
+            type: Boolean,
+            default: false,
+        },
+        resourceId: {
+            type: String, // id of the resource that the notification is related to
+            required: false,
+            default: "",
+        },
+        resourceType: {
+            type: String, // type of the resource that the notification is related to
+            required: false,
+            default: "",
+        },
+    },
+    { timestamps: true }
+);
+export const NotificationsModel = dynamoose.model(`${process.env.STAGE}-Notifications`, notificationSchema, { create: false });

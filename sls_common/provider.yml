@@ -59,6 +59,7 @@ provider:
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-SurfBreaks"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Conversations"
             - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Messages"
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-Notifications"
         - Effect: "Allow"
           Action:
             - "sqs:SendMessage"

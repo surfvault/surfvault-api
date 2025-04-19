@@ -1,0 +1,22 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "outDir": ".dist",
+        "baseUrl": "./"
+    },
+    "include": [
+        "**/*.ts", // Include all .ts files in the service directory
+        "../../shared/**/*.ts", // Include shared code if needed
+        "../../database/*.ts"
+    ],
+    "exclude": [
+        "iac/serverless/**",
+        "node_modules/**/*",
+        ".serverless/**/*",
+        ".webpack/**/*",
+        "_warmup/**/*",
+        ".vscode/**/*",
+        ".esbuild/**/*",
+        "dist/**/*"
+    ]
+}
