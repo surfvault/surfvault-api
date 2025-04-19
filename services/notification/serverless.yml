@@ -1,0 +1,54 @@
+service: notification-service
+
+frameworkVersion: "4"
+
+plugins: ${file(../../sls_common/plugins.yml):plugins}
+
+provider: ${file(../../sls_common/provider.yml):provider}
+
+functions:
+  getNotifications:
+    handler: handler.getNotifications
+    timeout: 30
+    events:
+      - httpApi:
+          path: /notifications/{userId}
+          method: get
+
+resources:
+  Resources:
+    #**************************************************************
+    #                      DynamoDB Tables
+    #**************************************************************
+    NotificationTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${self:provider.stage}-Notifications
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: UserIndex
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL # Project all attributes
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+
+custom:
+  stage: "${opt:stage, self:provider.stage}"
+  projectName: ${self:provider.stage}-surfvault-api
+
