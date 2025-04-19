@@ -13,3 +13,6 @@ services:
   
   conversation:
     path: services/conversation
+
+  notification:
+    path: services/notification
