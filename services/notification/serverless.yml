@@ -15,6 +15,14 @@ functions:
           path: /notifications/{userId}
           method: get
 
+  sendNotificationToFollowersOnUpload:
+    handler: handler.sendNotificationToFollowersOnUpload
+    timeout: 30
+    events:
+      - httpApi:
+          path: /notifications/upload-completed/{userId}
+          method: post
+
 resources:
   Resources:
     #**************************************************************

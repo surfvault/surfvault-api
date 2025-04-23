@@ -1,4 +1,4 @@
-import { ConversationsModel, SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
+import { ConversationsModel, SurfBreaksModel, SurfPhotosModel, UsersModel } from "@/database/dynamoose_models";
 import { S3Service } from "@/shared/s3_service";
 import { SQSService } from "@/shared/sqs_service";
 import { APIGatewayEvent, APIGatewayProxyResult, SQSEvent } from "aws-lambda";
@@ -261,12 +261,19 @@ export const updateUserFavorites = async (
       throw new Error("User not found");
     }
 
+    const surfBreakPK = payload.surfBreakIdentifier.split("-")[0];
+    const surfBreakSK = payload.surfBreakIdentifier.split("-")[1];
+    const surfBreak = await SurfBreaksModel.query("PK").eq(surfBreakPK).filter("SK").eq(surfBreakSK).exec();
     if (payload.action === 'favorite') {
       const updatedFavorites = [...(databaseUser[0]?.favorites || []), payload.surfBreakIdentifier];
       await UsersModel.update({ id, email: databaseUser[0]?.email }, { favorites: updatedFavorites });
+      const updatedFavoritedBy = [...(surfBreak[0]?.favoritedBy || []), id];
+      await SurfBreaksModel.update({ PK: surfBreakPK, SK: surfBreakSK }, { favoritedBy: updatedFavoritedBy });
     } else {
       const updatedFavorites = (databaseUser[0]?.favorites || []).filter((surfBreakId: string) => surfBreakId !== payload.surfBreakIdentifier);
       await UsersModel.update({ id, email: databaseUser[0]?.email }, { favorites: updatedFavorites });
+      const updatedFavoritedBy = (surfBreak[0]?.favoritedBy || []).filter((userId: string) => userId !== id);
+      await SurfBreaksModel.update({ PK: surfBreakPK, SK: surfBreakSK }, { favoritedBy: updatedFavoritedBy });
     }
 
 
