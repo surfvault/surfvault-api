@@ -18,10 +18,13 @@ export const getNotifications = async (
       throw new Error("User not found");
     }
 
-    const notifications = await NotificationsModel.query("userId").eq(userId).exec();
+    const notifications = await NotificationsModel.query("userId").eq(userId).where("read").eq(false).exec();
+    console.log("notifications: ", notifications);
+
+    const sortedNotifications = notifications.sort((a, b) => b.updatedAt - a.updatedAt);
 
     const resourcePopulatedNotifications = await Promise.all(
-      notifications.map(async (notification) => {
+      sortedNotifications.map(async (notification) => {
         const resourceId = notification.resourceId;
         const resourceType = notification?.resourceType;
         if (resourceType === "photographerUpload") {
@@ -102,10 +105,17 @@ export const sendNotificationToFollowersOnUpload = async (
     const body: { surfBreakIdentifier: string; } = JSON.parse(event.body || "{}");
     console.log("Received request to post notification to user followers on completed upload: ", body);
 
+    console.log("userId: ", userId);
     const user = await UsersModel.query("id").eq(userId).exec();
     if (!user.count) {
       throw new Error("User not found");
     }
+
+    const surfBreakPK = body.surfBreakIdentifier.split("-")[0];
+    const surfBreakSK = body.surfBreakIdentifier.split("-")[1];
+    console.log("surfBreakPK: ", surfBreakPK);
+    console.log("surfBreakSK: ", surfBreakSK);
+    const surfBreak = await SurfBreaksModel.query("PK").eq(surfBreakPK).where("SK").eq(surfBreakSK).exec();
 
     for (let i = 0; i < user[0].followers.length; i++) {
       const followerId = user[0].followers[i];
@@ -114,14 +124,11 @@ export const sendNotificationToFollowersOnUpload = async (
         userId: followerId,
         resourceId: userId,
         resourceType: "photographerUpload",
-        body: `Photographer ${user[0].name} has uploaded new media`,
+        body: `Uploaded new media at ${surfBreak[0].name}`,
         read: false,
       });
     }
 
-    const surfBreakPK = body.surfBreakIdentifier.split("-")[0];
-    const surfBreakSK = body.surfBreakIdentifier.split("-")[1];
-    const surfBreak = await SurfBreaksModel.query("PK").eq(surfBreakPK).where("SK").eq(surfBreakSK).exec();
     if (!surfBreak.count) {
       throw new Error("Surf break not found to notify followers");
     }
@@ -133,7 +140,7 @@ export const sendNotificationToFollowersOnUpload = async (
         userId: favoritedById,
         resourceId: body.surfBreakIdentifier,
         resourceType: "surfBreakUpload",
-        body: `New media uploaded to surf break ${surfBreak[0].name}`,
+        body: `New media uploaded by ${user[0].name}`,
         read: false,
       });
     }
