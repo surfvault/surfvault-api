@@ -23,6 +23,14 @@ functions:
           path: /notifications/upload-completed/{userId}
           method: post
 
+  markNotificationsAsRead:
+    handler: handler.markNotificationsAsRead
+    timeout: 30
+    events:
+      - httpApi:
+          path: /notifications/mark-as-read/{userId}
+          method: patch
+
 resources:
   Resources:
     #**************************************************************

@@ -173,3 +173,68 @@ export const sendNotificationToFollowersOnUpload = async (
     };
   }
 };
+
+export const markNotificationsAsRead = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    if (event.httpMethod === "OPTIONS") {
+      return {
+        statusCode: 200,
+        headers: {
+          "Access-Control-Allow-Origin": "http://localhost:3000",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+        body: "",
+      };
+    }
+
+    const { userId } = event.pathParameters || {};
+    if (!userId) {
+      throw new Error("userId is required");
+    }
+
+    const body: { notificationIds: string[]; } = JSON.parse(event.body || "{}");
+    console.log("Received request to mark notifications as read: ", body);
+
+    for (let i = 0; i < body.notificationIds.length; i++) {
+      await NotificationsModel.update(
+        {
+          id: body.notificationIds[i],
+          userId: userId
+        },
+        {
+          read: true,
+        });
+    }
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully read notifications`,
+        results: {
+          success: true,
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error reading notifications: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error reading notifications",
+        error: error,
+      }),
+    };
+  }
+};
