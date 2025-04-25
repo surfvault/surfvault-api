@@ -285,13 +285,13 @@ export const testSurfMediaForm = async (
     };
   }
 
+  const uuid = Math.random().toString(36).substring(2, 8); // start at index 2 to skip decimal point
   try {
-    const uuid = Math.random().toString(36).substring(2, 8); // start at index 2 to skip decimal point
-    // await SurfBreakMediaUploadProgressModel.create({
-    //   PK: `USER#${users[0].id}`,
-    //   SK: `UPLOAD#${body.country_identifier}#${!body.region ? "_" : body.region}#${body.surf_break}#${uuid}`,
-    //   total: body.mediaFiles.length,
-    // });
+    await SurfBreakMediaUploadProgressModel.create({
+      PK: `USER#${users[0].id}`,
+      SK: `UPLOAD#${body.country_identifier}#${!body.region ? "_" : body.region}#${body.surf_break}#${uuid}`,
+      total: body.mediaFiles.length,
+    });
     console.log("Created upload progress record");
 
     const today = new Date().toISOString().split("T")[0];
@@ -356,7 +356,7 @@ export const testSurfMediaForm = async (
     };
   } catch (error) {
     console.error("Error creating presigned urls for surf media upload: ", error);
-    // await SurfBreakMediaUploadProgressModel.delete({ PK: `USER#${users[0].id}`, SK: `UPLOAD#${body.country_identifier}#${!body.region ? "_" : body.region}#${body.surf_break}#${uuid}` });
+    await SurfBreakMediaUploadProgressModel.delete({ PK: `USER#${users[0].id}`, SK: `UPLOAD#${body.country_identifier}#${!body.region ? "_" : body.region}#${body.surf_break}#${uuid}` });
     return {
       statusCode: 500,
       headers: {

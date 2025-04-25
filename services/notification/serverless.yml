@@ -15,6 +15,22 @@ functions:
           path: /notifications/{userId}
           method: get
 
+  sendNotificationToFollowersOnUpload:
+    handler: handler.sendNotificationToFollowersOnUpload
+    timeout: 30
+    events:
+      - httpApi:
+          path: /notifications/upload-completed/{userId}
+          method: post
+
+  markNotificationsAsRead:
+    handler: handler.markNotificationsAsRead
+    timeout: 30
+    events:
+      - httpApi:
+          path: /notifications/mark-as-read/{userId}
+          method: patch
+
 resources:
   Resources:
     #**************************************************************

@@ -28,6 +28,10 @@ const surfBreakSchema = new dynamoose.Schema({
         type: Object,
         required: true
     },
+    favoritedBy: {
+        type: Array, // Array of user IDs
+        default: []
+    },
     createdBy: {
         type: String,
         required: true, // Reference to a user (USER#userId)
@@ -287,7 +291,7 @@ export const notificationSchema = new dynamoose.Schema(
             default: false,
         },
         resourceId: {
-            type: String, // id of the resource that the notification is related to
+            type: String, // id of the resource that the notification is related to, if surfBreak then PK-SK
             required: false,
             default: "",
         },
