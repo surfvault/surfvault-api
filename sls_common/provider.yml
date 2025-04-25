@@ -18,6 +18,10 @@ provider:
     SAVE_SURF_MEDIA_BATCH_SQS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/588738616160/surf-service-dev-cf-saveSurfMediaBatch
     AWS_KEY_ID: ${env:AWS_KEY_ID}
     AWS_KEY_SECRET: ${env:AWS_KEY_SECRET}
+    PUSHER_APP_ID: ${env:PUSHER_APP_ID}
+    PUSHER_APP_KEY: ${env:PUSHER_APP_KEY}
+    PUSHER_APP_SECRET: ${env:PUSHER_APP_SECRET}
+    PUSHER_APP_CLUSTER: ${env:PUSHER_APP_CLUSTER}
       
   iam:
     role:

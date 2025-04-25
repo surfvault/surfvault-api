@@ -1,4 +1,5 @@
 import { NotificationsModel, SurfBreaksModel, UsersModel } from "@/database/dynamoose_models";
+import { PusherClient } from "@/shared/pusher_client";
 import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -113,13 +114,12 @@ export const sendNotificationToFollowersOnUpload = async (
 
     const surfBreakPK = body.surfBreakIdentifier.split("-")[0];
     const surfBreakSK = body.surfBreakIdentifier.split("-")[1];
-    console.log("surfBreakPK: ", surfBreakPK);
-    console.log("surfBreakSK: ", surfBreakSK);
     const surfBreak = await SurfBreaksModel.query("PK").eq(surfBreakPK).where("SK").eq(surfBreakSK).exec();
 
+    const pusherClient = new PusherClient();
     for (let i = 0; i < user[0].followers.length; i++) {
       const followerId = user[0].followers[i];
-      await NotificationsModel.create({
+      const notification = await NotificationsModel.create({
         id: uuidv4(),
         userId: followerId,
         resourceId: userId,
@@ -127,6 +127,7 @@ export const sendNotificationToFollowersOnUpload = async (
         body: `Uploaded new media at ${surfBreak[0].name}`,
         read: false,
       });
+      await pusherClient.sendUserNotification(followerId, `New media uploaded by photographer`, notification.id);
     }
 
     if (!surfBreak.count) {
@@ -135,14 +136,15 @@ export const sendNotificationToFollowersOnUpload = async (
 
     for (let i = 0; i < surfBreak[0].favoritedBy.length; i++) {
       const favoritedById = surfBreak[0].favoritedBy[i];
-      await NotificationsModel.create({
+      const notification = await NotificationsModel.create({
         id: uuidv4(),
         userId: favoritedById,
         resourceId: body.surfBreakIdentifier,
         resourceType: "surfBreakUpload",
-        body: `New media uploaded by ${user[0].name}`,
+        body: `New media uploaded by ${user[0].handle}`,
         read: false,
       });
+      await pusherClient.sendUserNotification(favoritedById, `New media uploaded at surf break`, notification.id);
     }
 
     return {
