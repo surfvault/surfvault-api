@@ -263,3 +263,59 @@ export const replyToConversation = async (
     };
   }
 };
+
+export const readConversation = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { conversationId, userId } = event.pathParameters || {};
+    if (!conversationId) {
+      throw new Error("conversationId is required");
+    }
+    if (!userId) {
+      throw new Error("userId is required");
+    }
+
+    const databaseConversation = await ConversationsModel.query("id").eq(conversationId).exec();
+    console.log("databaseConversation: ", databaseConversation);
+    if (!databaseConversation.count) {
+      throw new Error("Conversation not found");
+    }
+
+    await ConversationsModel.update({
+      id: conversationId,
+      userId: databaseConversation[0].userId,
+    }, {
+      userUnreadCount: userId === databaseConversation[0].userId ? 0 : databaseConversation[0].userUnreadCount,
+      photographerUnreadCount: userId === databaseConversation[0].photographerId ? 0 : databaseConversation[0].photographerUnreadCount,
+    });
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully read new messages in conversation`,
+        results: {
+          success: true,
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error reading new messages in conversation: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error reading new messages in conversation",
+        error: error,
+      }),
+    };
+  }
+};

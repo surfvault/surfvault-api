@@ -39,6 +39,14 @@ functions:
           path: /conversation/{conversationId}/reply/{userId}
           method: post
 
+  readConversation:
+    handler: handler.readConversation
+    timeout: 30
+    events:
+      - httpApi:
+          path: /conversation/{conversationId}/read/{userId}
+          method: patch
+
 resources:
   Resources:
     #**************************************************************
