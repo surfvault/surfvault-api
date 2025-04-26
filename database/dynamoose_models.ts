@@ -218,6 +218,14 @@ const conversationSchema = new dynamoose.Schema(
             type: Number,
             default: 0,
         },
+        userUnreadCount: {
+            type: Number,
+            default: 0,
+        },
+        photographerUnreadCount: {
+            type: Number,
+            default: 0,
+        }
     },
     { timestamps: true }
 );
