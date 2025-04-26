@@ -228,7 +228,11 @@ export const replyToConversation = async (
 
     await ConversationsModel.update({
       id: conversationId,
+      userId: databaseConversation[0].userId,
+    }, {
       lastMessage: message,
+      userUnreadCount: userId === databaseConversation[0].userId ? 0 : databaseConversation[0].userUnreadCount + 1,
+      photographerUnreadCount: userId === databaseConversation[0].photographerId ? 0 : databaseConversation[0].photographerUnreadCount + 1,
     });
 
     return {
