@@ -186,29 +186,27 @@ export const updateUserHandle = async (
 
     await UsersModel.update({ id, email: databaseUser[0]?.email }, { handle, handleChanged: true });
 
-    const userSurfBreakCountryMap = databaseUser[0]?.surfBreaks;
-    if (userSurfBreakCountryMap) {
+    const userPhotos = await SurfPhotosModel.query("PK").eq(`USER#${id}`).exec();
+
+    if (userPhotos?.length) {
       // Update all s3 objects with new handle
       // sqs will be triggered for each SURF_BUCKET
       const sqsErrors = [];
-      for (const country in userSurfBreakCountryMap) {
-        const result = await SQSService.sendMessage(
-          process.env.UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL,
-          JSON.stringify({
-            country,
-            userId: id,
-            oldHandle: databaseUser[0].handle,
-            newHandle: handle
-          })
-        );
-        if (!result.MessageId) {
-          sqsErrors.push(country);
-        }
+      const result = await SQSService.sendMessage(
+        process.env.UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL,
+        JSON.stringify({
+          userId: id,
+          oldHandle: databaseUser[0].handle,
+          newHandle: handle
+        })
+      );
+      if (!result.MessageId) {
+        sqsErrors.push(`Error sending message to SQS for user ${id} with handle ${handle}`);
       }
 
       if (sqsErrors.length) {
-        console.error("Error sending messages to update s3 objects for countries:", sqsErrors);
-        throw new Error("Error updating s3 objects for some countries");
+        console.error("Error sending messages to update s3 objects:", sqsErrors);
+        throw new Error("Error updating s3 objects");
       }
     }
 
@@ -441,12 +439,10 @@ export const followPhotographer = async (
 
 // TODO monetization opportunity with 1 free handle change then pay to update after?
 interface SQSUpdateS3PhotographerHandleMessageBody {
-  country: string;
   userId: string;
   oldHandle: string;
   newHandle: string;
   continuationToken?: string;
-  countriesUpdated?: string[];
 }
 export const updateS3PhotographerHandle = async (event: SQSEvent, context: any) => {
   for (const record of event.Records) {
@@ -454,31 +450,46 @@ export const updateS3PhotographerHandle = async (event: SQSEvent, context: any) 
     console.log("sqsBody:", sqsBody);
     const updateS3PhotographerHandleBody: SQSUpdateS3PhotographerHandleMessageBody =
       JSON.parse(sqsBody);
-    const { country, userId, oldHandle, newHandle } = updateS3PhotographerHandleBody;
+    const { userId, oldHandle, newHandle } = updateS3PhotographerHandleBody;
     let { continuationToken } = updateS3PhotographerHandleBody;
 
     const databaseUser = await UsersModel.query("id").eq(userId).exec();
+    if (!databaseUser.count) {
+      console.error("User not found: ", userId);
+      continue;
+    }
 
-    const userSurfBreakCountryMap = databaseUser[0]?.surfBreaks;
-    for (const country in userSurfBreakCountryMap) { // TODO we just want surfbreaks pertaining to country
-      const surfBreaks = userSurfBreakCountryMap[country];
-      for (const surfBreak in surfBreaks) {
-        const surfBreakDates = surfBreaks[surfBreak];
-        for (const date of surfBreakDates) {
-          const oldPrefix = `${country}/${surfBreak}/${date}/${oldHandle}`;
-          const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(S3Service.SURF_BUCKET, oldPrefix, continuationToken);
-          for (const content of s3ReturnObject?.Contents ?? []) {
-            const newKey = content.Key.replace(oldHandle, newHandle);
-            await S3Service.copyS3Object(S3Service.SURF_BUCKET, content.Key, S3Service.SURF_BUCKET, newKey);
-            await S3Service.deleteS3Object(S3Service.SURF_BUCKET, content.Key);
-          }
-          continuationToken = s3ReturnObject?.ContinuationToken;
-        }
+    const s3Bucket = databaseUser[0].access === "private" ? S3Service.SURF_BUCKET_PRIVATE : S3Service.SURF_BUCKET;
+    const userPhotos = await SurfPhotosModel.query("PK").eq(`USER#${userId}`).exec();
+    for (let i = 0; i < userPhotos.length; i++) {
+      const photo = userPhotos[i];
+      if (photo.SK.includes(newHandle)) {
+        console.log("photo already migrated, skipping:", photo.SK);
+        continue;
       }
+
+      const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(s3Bucket, photo.s3Key);
+      const content = s3ReturnObject?.Contents?.[0];
+
+      if (!content || !s3ReturnObject.KeyCount) {
+        console.log('photo already migrated, skipping:', photo.SK);
+        continue;
+      }
+
+      const newKey = content.Key.replace(oldHandle, newHandle);
+
+      await S3Service.copyS3Object(s3Bucket, content.Key, s3Bucket, newKey);
+      await S3Service.deleteS3Object(s3Bucket, content.Key);
+      await SurfPhotosModel.create({
+        ...photo,
+        SK: photo.SK.replace(oldHandle, newHandle),
+        s3Key: newKey,
+      });
+      await SurfPhotosModel.delete({ PK: `USER#${userId}`, SK: photo.SK });
     }
 
     if (continuationToken) {
-      console.log("Remaining s3 objects for country", country, "sending back to sqs will continuationToken", continuationToken);
+      console.log("sending back to sqs will continuationToken", continuationToken);
       await SQSService.sendMessage(
         process.env.UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL,
         JSON.stringify({
@@ -487,7 +498,7 @@ export const updateS3PhotographerHandle = async (event: SQSEvent, context: any) 
         })
       );
     } else {
-      console.log("All s3 objects in the following country updated for user", userId, country);
+      console.log("All s3 objects updated for user", userId, " from handle ", oldHandle, " to ", newHandle);
     }
   }
 };
@@ -516,9 +527,7 @@ export const updateS3PhotographerAccess = async (event: SQSEvent, context: any) 
     const userPhotos = await SurfPhotosModel.query("PK").eq(`USER#${userId}`).exec();
     for (let i = 0; i < userPhotos.length; i++) {
       const photo = userPhotos[i];
-      const s3KeyParts = photo.SK.replace("PHOTO#", "").split("#");
-      const s3Key = s3KeyParts.join("/");
-      const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(originalBucket, s3Key);
+      const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(originalBucket, photo.s3Key);
       const content = s3ReturnObject?.Contents?.[0];
 
       if (!content || !s3ReturnObject.KeyCount) {
