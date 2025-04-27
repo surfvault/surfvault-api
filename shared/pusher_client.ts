@@ -12,10 +12,10 @@ export class PusherClient {
 
   constructor() {
     this.pusher = new pusher({
-      appId: process.env.PUSHER_APP_ID,
-      key: process.env.PUSHER_APP_KEY,
-      secret: process.env.PUSHER_APP_SECRET,
-      cluster: process.env.PUSHER_APP_CLUSTER,
+      appId: process.env.PUSHER_APP_ID || "",
+      key: process.env.PUSHER_APP_KEY || "",
+      secret: process.env.PUSHER_APP_SECRET || "",
+      cluster: process.env.PUSHER_APP_CLUSTER || "",
     });
   }
 
@@ -41,6 +41,24 @@ export class PusherClient {
       text,
       channel: `user-${userId}`,
       event: "notification",
+    };
+    await this.sendNotification(message);
+  }
+
+  async sendUserMessageNotification(
+    userId: string,
+    messageBody: string,
+  ) {
+    if (!userId) {
+      throw new Error("Invalid user ID");
+    }
+
+    console.log("Sending message notification to user", userId);
+    const message: Message = {
+      notificationId: "",
+      text: messageBody,
+      channel: `user-${userId}`,
+      event: "message",
     };
     await this.sendNotification(message);
   }

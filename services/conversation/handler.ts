@@ -1,4 +1,5 @@
 import { ConversationsModel, MessagesModel, UsersModel } from "@/database/dynamoose_models";
+import { PusherClient } from "@/shared/pusher_client";
 import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -234,6 +235,12 @@ export const replyToConversation = async (
       userUnreadCount: userId === databaseConversation[0].userId ? 0 : databaseConversation[0].userUnreadCount + 1,
       photographerUnreadCount: userId === databaseConversation[0].photographerId ? 0 : databaseConversation[0].photographerUnreadCount + 1,
     });
+
+    const pusherClient = new PusherClient();
+    await pusherClient.sendUserMessageNotification(
+      userId === databaseConversation[0].userId ? databaseConversation[0].photographerId : databaseConversation[0].userId,
+      message,
+    );
 
     return {
       statusCode: 200,
