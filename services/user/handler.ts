@@ -187,7 +187,7 @@ export const updateUserHandle = async (
     await UsersModel.update({ id, email: databaseUser[0]?.email }, { handle, handleChanged: true });
 
     const userPhotos = await SurfPhotosModel.query("PK").eq(`USER#${id}`).exec();
-
+    const oldHandle = databaseUser[0].handle;
     if (userPhotos?.length) {
       // Update all s3 objects with new handle
       // sqs will be triggered for each SURF_BUCKET
@@ -196,7 +196,7 @@ export const updateUserHandle = async (
         process.env.UPDATE_S3_PHOTOGRAPHER_HANDLE_SQS_QUEUE_URL,
         JSON.stringify({
           userId: id,
-          oldHandle: databaseUser[0].handle,
+          oldHandle,
           newHandle: handle
         })
       );
@@ -210,6 +210,14 @@ export const updateUserHandle = async (
       }
     }
 
+    const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(S3Service.PROFILE_PIC_BUCKET, oldHandle);
+    const content = s3ReturnObject?.Contents?.[0];
+
+    if (content && s3ReturnObject.KeyCount) {
+      const newKey = content.Key.replace(oldHandle, handle);
+      await S3Service.copyS3Object(S3Service.PROFILE_PIC_BUCKET, content.Key, S3Service.PROFILE_PIC_BUCKET, newKey);
+      await S3Service.deleteS3Object(S3Service.PROFILE_PIC_BUCKET, content.Key);
+    }
 
     return {
       statusCode: 200,
