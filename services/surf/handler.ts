@@ -97,6 +97,82 @@ export const getSurfMedia = async (
   }
 };
 
+export const getSurfMediaForMonth = async (
+  event: APIGatewayEvent,
+  context: any
+): Promise<APIGatewayProxyResult> => {
+  try {
+    const { country, region, surf_break, photographer, startDate, endDate } = event.queryStringParameters || {};
+    console.log("Received request to get surf media: ", { country, surf_break, photographer }, "startDate: ", startDate, "endDate: ", endDate);
+    if (!country) {
+      throw new Error("Invalid country identifier");
+    }
+
+    if (!surf_break && !photographer) {
+      throw new Error("Missing surf break or photographer");
+    }
+
+    let photoMapByDate: { [key: string]: string; } = {};
+    const startNumber = startDate.split("-")[2];
+    const endNumber = endDate.split("-")[2];
+    if (surf_break && photographer) {
+      for (let i = parseInt(startNumber); i <= parseInt(endNumber); i++) {
+        const date = `${startDate.split("-")[0]}-${startDate.split("-")[1]}-${i < 10 ? `0${i}` : i}`;
+
+        const s3Key = region != "0" ? `${country}/${region}/${surf_break}/${date}/${photographer}` : `${country}/${surf_break}/${date}/${photographer}`;
+        const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(S3Service.SURF_BUCKET, s3Key);
+        console.log("s3ReturnObject", s3ReturnObject);
+
+        const photoOnDate = s3ReturnObject?.Contents?.length ? `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${s3ReturnObject.Contents[0].Key}` : "";
+        photoMapByDate = {
+          ...photoMapByDate,
+          [date]: photoOnDate,
+        };
+      }
+    } else if (surf_break) {
+      for (let i = parseInt(startNumber); i <= parseInt(endNumber); i++) {
+        const date = `${startDate.split("-")[0]}-${startDate.split("-")[1]}-${i < 10 ? `0${i}` : i}`;
+
+        const s3Key = region != "0" ? `${country}/${region}/${surf_break}/${date}` : `${country}/${surf_break}/${date}`;
+        const s3ReturnObject = await S3Service.listBucketObjectsWithPrefix(S3Service.SURF_BUCKET, s3Key);
+        console.log("s3ReturnObject", s3ReturnObject);
+
+        const photoOnDate = s3ReturnObject?.Contents?.length ? `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${s3ReturnObject.Contents[0].Key}` : "";
+        photoMapByDate = {
+          ...photoMapByDate,
+          [date]: photoOnDate,
+        };
+      }
+    }
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: `Successfully retrieved surf media for country: ${country} and surf break: ${surf_break}`,
+        results: {
+          media: photoMapByDate,
+        }
+      }),
+    };
+  } catch (error) {
+    console.error("Error getting surf media: ", error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+      },
+      body: JSON.stringify({
+        message: "Error getting surf media",
+        error: error,
+      }),
+    };
+  }
+};
+
 export const saveNewSurfBreakMedia = async (
   event: APIGatewayEvent,
   context: any
@@ -600,7 +676,9 @@ export const getSurfBreaks = async (
     for (const surfBreak of surfBreaks) {
       const s3Prefix = surfBreak.SK.split("#")[0] !== "_" ? `${surfBreak.country}/${surfBreak.SK.split("#")[0]}/${surfBreak.name}` : `${surfBreak.country}/${surfBreak.name}`;
       const randomPhotoFromS3 = await S3Service.listBucketObjectsWithPrefix(S3Service.SURF_BUCKET, s3Prefix);
-      surfBreak.thumbnail = randomPhotoFromS3?.Contents?.length ? `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${randomPhotoFromS3.Contents[0].Key}` : "";
+      // latest photo index
+      const latestPhotoIndex = randomPhotoFromS3?.Contents?.length ? randomPhotoFromS3.Contents.length - 1 : 0;
+      surfBreak.thumbnail = randomPhotoFromS3?.Contents?.length ? `https://${S3Service.SURF_BUCKET}.s3.amazonaws.com/${randomPhotoFromS3.Contents?.[latestPhotoIndex]?.Key}` : "";
     }
 
     return {
