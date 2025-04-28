@@ -15,6 +15,14 @@ functions:
           path: /surf/media
           method: get
   
+  getSurfMediaForMonth:
+    handler: handler.getSurfMediaForMonth
+    timeout: 30
+    events:
+      - httpApi:
+          path: /surf/media/month
+          method: get
+  
   getSurfBreaks:
     handler: handler.getSurfBreaks
     timeout: 30
